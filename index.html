@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Derja Sense AI – MVP</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--tx:#1b1d2a;--mu:#68697e;--bd:#e1e2ee;--ac:#0f8a7e;--pos:#1a8a4a;--neg:#c0392b;--neu:#7a7b8c;--ir:#b7791f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13151c;--card:#1c1f2a;--tx:#ececf4;--mu:#9a9cb2;--bd:#32364a;--ac:#3fc5b6;--pos:#4cc98a;--neg:#ff7a6b;--neu:#9a9cb2;--ir:#e8b04a}}
+:root[data-theme="dark"]{--bg:#13151c;--card:#1c1f2a;--tx:#ececf4;--mu:#9a9cb2;--bd:#32364a;--ac:#3fc5b6;--pos:#4cc98a;--neg:#ff7a6b;--neu:#9a9cb2;--ir:#e8b04a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px}h1{font-size:22px;margin:4px 0}h2{font-size:17px;margin:0 0 8px}
+.sub,.note{color:var(--mu)}.note{font-size:13px}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+textarea,input,select{width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px;font:inherit}
+textarea{min-height:130px;resize:vertical}
+.btn{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;margin:4px 4px 0 0}.btn.pri{background:var(--ac);color:#04201d;border-color:var(--ac);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.kpi{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px}.kpi b{display:block;font-size:24px}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+.b{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;color:#fff}.pos{background:var(--pos)}.neg{background:var(--neg)}.neu{background:var(--neu)}.ir{background:var(--ir)}
+.bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ac)}
+.row{display:grid;grid-template-columns:90px 1fr 30px;gap:8px;align-items:center;margin:4px 0}
+.act{border-left:3px solid var(--ac);background:var(--bg);padding:6px 10px;border-radius:0 8px 8px 0;margin:6px 0}
+.rep{border-top:1px solid var(--bd);padding-top:8px;margin-top:8px}.rep textarea{min-height:60px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.hid{display:none}.mut{color:var(--mu);font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>🗣️ Derja Sense AI <span class="b neu">MVP</span></h1>
+<p class="sub">Décoder derja, Arabizi et mélange FR/EN : sentiment réel, ironie, sujet, actions et réponses suggérées.</p>
+
+<div class="card"><h2>1. Commentaires publics</h2>
+<p class="note">Un commentaire par ligne. Les @mentions, e-mails, téléphones et liens sont anonymisés avant analyse. Moteur de démonstration à règles (lexique + règles d’ironie), sans appel API.</p>
+<textarea id="inp" placeholder="Collez ici des commentaires publics de la page de la marque…"></textarea>
+<button class="btn pri" id="go">Analyser</button><button class="btn" id="sample">Charger 23 commentaires de test</button><button class="btn" id="clr">Vider</button><button class="btn pri hid" id="ai">✨ Analyser avec l’IA (Claude)</button></div>
+
+<div class="card"><h2>Test rapide d’un commentaire</h2><input id="lt1" dir="auto" placeholder="Tapez un commentaire en derja, Arabizi ou FR/EN… ex. Bravo, 3 jours de retard 🙃"><div id="lt2" style="margin-top:8px"></div></div>
+<div id="res" class="hid">
+<div class="card"><h2>2. Résultats <span style="float:right"><button class="btn" id="rpt" style="margin:0 4px 0 0">📄 Rapport</button><button class="btn" id="csv" style="margin:0">⬇ CSV</button></span></h2><div class="kpis" id="kpis"></div><div id="dist"></div><div id="cmp" style="margin-top:10px"></div></div>
+<div class="card"><h2>Sujets des commentaires négatifs</h2><div id="topics"></div></div>
+<div class="card"><h2>Détail</h2><div class="g" style="margin-bottom:8px"><select id="fs"><option value="">Tous sentiments</option><option value="pos">Positifs</option><option value="neg">Négatifs</option><option value="neu">Neutres</option><option value="ir">Ironies</option></select><select id="ft"><option value="">Tous sujets</option><option>prix</option><option>livraison</option><option>qualité</option><option>service</option><option>autre</option></select><input id="fq" placeholder="Rechercher…"></div><div class="scroll" id="tbl"></div></div>
+<div class="card"><h2>3. Rapport : 3 actions prioritaires</h2><div id="acts"></div>
+<h2 style="margin-top:14px">Réponses suggérées (validation humaine obligatoire)</h2><div id="reps"></div><p class="note" id="vcount"></p></div>
+</div>
+
+<div class="card"><h2>Suivi dans le temps</h2><p class="note">Enregistrez chaque analyse (ex. avant / après une action corrective) pour mesurer l’évolution des commentaires négatifs.</p><div class="g"><input id="sl" placeholder="Nom de la série (ex. Semaine 1)"><button class="btn pri" id="sv">Enregistrer cette analyse</button></div><div class="scroll" id="snl" style="margin-top:8px"></div></div>
+<div class="card hid" id="aib"><h2>✨ Analyse IA (Claude) : comparaison à trois moteurs</h2><p class="note">Les commentaires anonymisés (30 maximum) sont envoyés à Claude, qui traduit, détecte l’ironie, priorise l’urgence, rédige une réponse en derja et propose de nouveaux mots pour le lexique (à valider en 4).</p><div id="aio"></div></div>
+<div class="card"><h2>4. Lexique vivant</h2>
+<p class="note">Proposez une variante d’orthographe. Elle n’entre dans le lexique qu’après validation humaine.</p>
+<div class="g"><input id="lw" placeholder="mot (ex. mnayek)"><select id="lp"><option value="1">positif</option><option value="-1">négatif</option><option value="0">neutre</option></select>
+<select id="lt"><option value="">sans sujet</option><option>prix</option><option>livraison</option><option>qualité</option><option>service</option></select><button class="btn" id="ladd">Proposer</button></div>
+<div id="pend" style="margin-top:8px"></div><p class="mut" id="lcount"></p></div>
+
+<div class="card"><h2>Éthique et limites</h2><p class="note">Commentaires publics uniquement, anonymisation systématique, décision finale humaine. Le moteur est une simulation par règles : l’ironie et les dialectes régionaux sont mal couverts, et la précision mesurée sur le jeu de test (écrit avec le lexique) est optimiste. À valider sur 100–200 commentaires réels de plusieurs régions avant tout usage.</p></div>
+</main>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const strip=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f\u064B-\u065F]/g,""),key=w=>strip(w).replace(/(.)\1+/g,"$1");
+const L0=[["behi|bahi|bhi|باهي|مليح|mli7|mlih|mliha|mleh|a7sen|ahsen|7asen",1,""],["top|parfait|excellent|super|nice|cool|love|genial|magnifique|bravo|merci|yaatik|ya3tik|yaatikom|ya3tikom|essa7a|ممتاز|برافو|تحفة|رائع|ممتازة",1,""],
+["ghali|ghalya|ghalia|cher|chere|غالي|غالية|arnaque|scam",-1,"prix"],["prix|9ima|se3r|soum|flous|tarif|سعر|ثمن",0,"prix"],
+["5ayeb|5ayba|khayeb|khayba|khareb|9abeh|nul|zero|mauvais|horrible|catastrophe|decevant|fezi3|خايب|فظيع|زبالة",-1,""],
+["retard|ta2khir|ta5khir|tarakhi|jamais venu",-1,"livraison"],["livraison|livreur|colis|commande|توصيل",0,"livraison"],["wsal|wsel|wasel|jew|jaw",1,"livraison"],
+["jouda|qualite|produit|gout|taste|ta3m",0,"qualité"],["casse|cassé|abime|5arbet|kharbet|fsed|expire|perime",-1,"qualité"],
+["service|accueil|support|serveur|serveuse|staff|equipe|khedma|l5edma|الخدمة|sav",0,"service"],["ma7adech|impoli|malpoli|7a9ra|ma7trem",-1,"service"]];
+const NEG=new Set(["mouch","mech","mich","pas","not","موش","مش"].map(key)),INT=new Set(["barcha","yaser","yaaser","tres","vraiment","برشا","ياسر"].map(key));
+const POSE="😍❤️👍🔥👏🙏😊",NEGE="😡👎🤮😤😠😢",CUE=/comme d.?hab|comme toujours|kol marra|dima|encore|jamais|toujours pas|🙃|🤡|😂|3 ?jours|semaine/;
+const BP=new Set("bravo top excellent merci parfait super nice love génial genial".split(" ")),BN=new Set("nul mauvais horrible cher retard catastrophe decevant scam arnaque".split(" "));
+let M={},ext=[],pend=[],last=[];
+try{ext=JSON.parse(localStorage.getItem("dsa")||"[]")}catch(e){}
+function build(){M={};[...L0,...ext].forEach(([v,p,t])=>v.split("|").forEach(w=>M[key(w)]={p:+p,t,w}));$("lcount").textContent=ext.length+" mot(s) ajouté(s) et validé(s) · "+Object.keys(M).length+" entrées au total"}
+const anon=t=>t.replace(/https?:\/\/\S+/g,"[lien]").replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,"[email]").replace(/@\w+/g,"@utilisateur").replace(/\+?\d[\d ]{7,}\d/g,"[tel]");
+const AZ={"3":"ع","7":"ح","9":"ق","5":"خ","2":"ء"};
+const arz=t=>t.split(/(\s+)/).map(w=>/\p{L}/u.test(w)&&/\d/.test(w)&&!/^\d+\p{L}{0,2}$/u.test(w)?w.replace(/[35792]/g,c=>AZ[c]||c):w).join("");
+function analyse(raw){const txt=anon(raw),low=strip(txt),toks=low.split(/[^\p{L}\p{N}]+/u).filter(Boolean),keys=toks.map(key);
+let s=0,hits=[],tp=[],posHit=false,negTok=false;
+keys.forEach((k,i)=>{if(NEG.has(k)||INT.has(k))return;let e=M[k],ng=false;
+ if(!e){const m=k.match(/^ma(.+?)(nich|nish|ch|sh)$/);if(m&&M[key(m[1])]){e=M[key(m[1])];ng=true}}
+ if(!e)return;if(!ng)for(const j of[i-1,i-2])if(j>=0&&NEG.has(keys[j]))ng=true;
+ let p=ng?-e.p:e.p;if(e.t&&p<0)tp.unshift(e.t);else if(e.t)tp.push(e.t);
+ s+=p;if(p>0&&!ng)posHit=true;if(p<0)negTok=true;hits.push(e.w+(p>0?" (+)":p<0?" (−)":"")+(ng?" nég.":""))});
+for(const c of POSE)if(txt.includes(c))s+=.5;for(const c of NEGE)if(txt.includes(c)){s-=1;negTok=true}
+const ir=posHit&&(CUE.test(low)||CUE.test(txt)||negTok),sent=ir?"neg":s>0?"pos":s<0?"neg":"neu";
+const bt=txt.toLowerCase().split(/[^\p{L}\p{N}']+/u);let bs=0;bt.forEach(w=>{if(BP.has(w))bs++;if(BN.has(w))bs--});
+return{raw,txt,az:arz(txt),sent,ir,topic:tp[0]||"autre",hits,base:bs>0?"pos":bs<0?"neg":"neu"}}
+const SL={pos:"positif",neg:"négatif",neu:"neutre"},bd=(s,ir)=>`<span class="b ${s}">${SL[s]}</span>`+(ir?` <span class="b ir">ironie</span>`:"");
+const ACT={prix:"Justifier le prix (qualité, origine) ou tester une offre ciblée ; clarifier l’affichage tarifaire.",livraison:"Auditer les retards avec le livreur et notifier les clients de façon proactive (SMS/WhatsApp).",qualité:"Contrôler le lot concerné et proposer remplacement ou remboursement rapide.",service:"Fixer un délai de réponse (ex. moins de 2 h) et former l’équipe aux réponses en derja.",autre:"Lire ces commentaires manuellement et enrichir le lexique."};
+const REP={prix:"Merci 3la ra2yek 🙏 el 9ima 3andha 3la9a bel jouda. Ab3athlna message privé w n7ebou nfahmouk akther.",livraison:"Sema7na barcha 3la el ta2khir 🙏 ab3athlna rakm el commande fel privé w nsal7ou el mochkla men tawa.",qualité:"Aasfin barcha 🙏 ab3athlna sora w rakm el commande fel privé w n3awdhoulek el produit.",service:"Sema7na 3la el khedma mouch behi 🙏 ab3athlna message privé w nsal7ou el mochkla.",autre:"Sema7na 🙏 ab3athlna message privé w n3awnouk.",pos:"Ya3tik essa7a! Farhanin barcha bik 🙏",neu:"Merci 3la el su2el 🙏 ab3athlna message privé w n3awnouk."};
+const pc=(a,n)=>n?Math.round(100*a/n):0;
+function run(){const lines=$("inp").value.split("\n").map(x=>x.trim()).filter(Boolean);if(!lines.length){alert("Collez des commentaires ou chargez le jeu de test.");return}
+build();last=lines.map(l=>{const m=l.match(/^(.*?)\s*\|\|(pos|neg|neu)$/);const r=analyse(m?m[1]:l);r.gold=m?m[2]:null;return r});render()}
+function render(){const R=last,n=R.length,c=k=>R.filter(r=>r.sent===k).length;$("res").classList.remove("hid");
+const G=R.filter(r=>r.gold),ok=f=>G.filter(r=>f(r)===r.gold).length;
+$("kpis").innerHTML=[["Commentaires",n],["Positifs",pc(c("pos"),n)+"%"],["Négatifs",pc(c("neg"),n)+"%"],["Neutres",pc(c("neu"),n)+"%"],["Ironies détectées",R.filter(r=>r.ir).length]].map(([a,b])=>`<div class="kpi">${a}<b>${b}</b></div>`).join("");
+$("cmp").innerHTML=G.length?`<b>Preuve de valeur (jeu de test annoté, ${G.length} commentaires) :</b> Derja Sense ${pc(ok(r=>r.sent),G.length)}% de justesse contre ${pc(ok(r=>r.base),G.length)}% pour un modèle standard (mots FR/EN, sans normalisation ni ironie).`:`<span class="note">Chargez le jeu de test annoté pour comparer avec un modèle standard.</span>`;
+const t={};R.filter(r=>r.sent==="neg").forEach(r=>t[r.topic]=(t[r.topic]||0)+1);const tt=Object.entries(t).sort((a,b)=>b[1]-a[1]),mx=tt[0]?tt[0][1]:1;
+$("topics").innerHTML=tt.length?tt.map(([k,v])=>`<div class="row"><span>${k}</span><div class="bar"><i style="width:${100*v/mx}%"></i></div><b>${v}</b></div>`).join(""):'<span class="note">Aucun commentaire négatif.</span>';
+$("tbl").innerHTML="<table><tr><th>Commentaire (anonymisé)</th><th>Normalisation Arabizi</th><th>Sentiment</th><th>Sujet</th><th>Signaux</th><th>Modèle standard</th></tr>"+R.map(r=>`<tr><td dir="auto">${esc(r.txt)}</td><td dir="auto">${esc(r.az)}</td><td>${bd(r.sent,r.ir)}</td><td>${r.topic}</td><td class="mut">${esc(r.hits.join(", ")||"—")}</td><td><span class="b ${r.base}">${SL[r.base]}</span>${r.gold&&r.base!==r.gold?" ✗":""}</td></tr>`).join("")+"</table>";
+$("acts").innerHTML=tt.length?tt.slice(0,3).map(([k,v],i)=>`<div class="act"><b>${i+1}. ${k[0].toUpperCase()+k.slice(1)}</b> (${v} commentaire${v>1?"s":""} négatif${v>1?"s":""}) : ${ACT[k]}</div>`).join(""):'<div class="act">Aucune action urgente : continuer à répondre aux commentaires positifs.</div>';
+const rs=[...R.filter(r=>r.sent==="neg"),...R.filter(r=>r.sent!=="neg")].slice(0,6);
+$("reps").innerHTML=rs.map((r,i)=>`<div class="rep"><div class="mut" dir="auto">${bd(r.sent,r.ir)} ${esc(r.txt)}</div><textarea dir="auto">${esc(r.ir?"Sema7na barcha 🙏 "+REP[r.topic]:REP[r.sent==="neg"?r.topic:r.sent])}</textarea><label class="mut"><input type="checkbox" class="v" style="width:auto"> Validé par un humain</label></div>`).join("");
+document.querySelectorAll(".v").forEach(x=>x.onchange=()=>{$("vcount").textContent=document.querySelectorAll(".v:checked").length+" réponse(s) validée(s) sur "+rs.length+". Rien n’est publié automatiquement."});$("vcount").textContent="0 réponse validée sur "+rs.length+". Rien n’est publié automatiquement."}
+const S=[["Livraison behi barcha w el prix mnasseb 👍","pos"],["5ayeb barcha el service, ma7adech yjaweb","neg"],["Bravo les gars, 3 jours de retard comme d'hab 🙃","neg"],["Yaatik essa7a, produit mliha w jouda 3alya","pos"],["ghalya barcha 3la el jouda hedhi","neg"],["mouch behi el 9ima, arnaque","neg"],["الخدمة ممتازة برافو","pos"],["Merci pour le colis cassé 😂","neg"],["tawa wsal el colis, behi yaser","pos"],["mawselnich el commande ba3d semaine","neg"],["Super service, top 🔥","pos"],["prix 40dt pour ça? vraiment 😡","neg"],["nal9ou 7ata 7aja, el serveur impoli","neg"],["Excellent comme toujours 🙃","neg"],["ma7labaha, el gout top w el accueil behi","pos"],["3andkom promo ?","neu"],["wakteh yfta7 el magasin ?","neu"],["horrible, catastrophe, nul nul nul","neg"],["Parfait, le livreur n'est jamais venu, bravo","neg"],["3jaabni barcha, ya3tikom essa7a ❤️","pos"],["Wallah 5arbet el telephone men 2 jours, khedma 5ayba","neg"],["Mouch mli7 el taste","neg"],["Merci, mais toujours pas de réponse 🤡","neg"]];
+$("sample").onclick=()=>{$("inp").value=S.map(x=>x[0]+" ||"+x[1]).join("\n");run()};
+$("go").onclick=run;$("clr").onclick=()=>{$("inp").value="";$("res").classList.add("hid")};
+function rp(){$("pend").innerHTML=pend.map((p,i)=>`<div class="act">${esc(p[0])} · ${p[1]>0?"positif":p[1]<0?"négatif":"neutre"} · ${p[2]||"sans sujet"} <button class="btn" data-a="${i}">Valider</button><button class="btn" data-r="${i}">Rejeter</button></div>`).join("");
+document.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{const p=pend.splice(+b.dataset.a,1)[0];ext.push(p);try{localStorage.setItem("dsa",JSON.stringify(ext))}catch(e){}build();rp();if(last.length)run()});
+document.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{pend.splice(+b.dataset.r,1);rp()})}
+$("ladd").onclick=()=>{const w=$("lw").value.trim();if(!w)return;pend.push([w,+$("lp").value,$("lt").value]);$("lw").value="";rp()};
+let SM=null,DL=null;
+try{if(window.claude){claude.use("sample").then(s=>{SM=s;if(s)$("ai").classList.remove("hid")}).catch(()=>{});claude.use("downloads").then(d=>{DL=d}).catch(()=>{})}}catch(e){}
+$("ai").onclick=async()=>{if(!last.length){run();if(!last.length)return}
+const B=last.slice(0,30),btn=$("ai");btn.disabled=true;btn.textContent="Analyse en cours…";$("aib").classList.remove("hid");$("aio").innerHTML='<span class="note">Claude analyse les commentaires…</span>';
+const P=`Tu es expert du dialecte tunisien (derja), de l'Arabizi et du mélange arabe/français/anglais. Analyse chaque commentaire client anonymisé d'une marque. Réponds UNIQUEMENT par un tableau JSON, un objet par commentaire, dans l'ordre : {"i":numéro,"s":"pos|neg|neu","ir":true|false (ironie : sentiment apparent positif mais sens réel négatif),"t":"prix|livraison|qualité|service|autre","fr":"traduction française courte","u":1 à 3 (urgence de réponse, 3 = très urgent),"r":"réponse courte et polie en derja tunisien, lettres latines","nw":[{"w":"mot derja ou Arabizi utile","p":-1|0|1,"t":"sujet ou vide"}]}. Si ironie, s doit être "neg".\nCommentaires :\n`+B.map((r,i)=>i+". "+r.txt).join("\n");
+try{let v=await SM.json(P);if(!Array.isArray(v))v=v.items||v.commentaires||[];
+const rows=B.map((r,i)=>({r,a:v.find(x=>+x.i===i)||v[i]||{}}));
+const G=rows.filter(x=>x.r.gold),ac=f=>pc(G.filter(x=>f(x)===x.r.gold).length,G.length);
+const nw=[];rows.forEach(x=>(x.a.nw||[]).forEach(w=>{if(w&&w.w&&!M[key(w.w)]&&!pend.some(p=>key(p[0])===key(w.w))&&!nw.includes(key(w.w))){nw.push(key(w.w));pend.push([w.w,+w.p||0,w.t||""])}}));rp();
+rows.forEach(x=>x.r.ai=x.a);rows.sort((a,b)=>(+b.a.u||0)-(+a.a.u||0));
+$("aio").innerHTML=(G.length?`<p><b>Justesse sur ${G.length} commentaires annotés :</b> modèle standard ${ac(x=>x.r.base)}% · règles Derja Sense ${ac(x=>x.r.sent)}% · IA (Claude) ${ac(x=>x.a.s)}%</p>`:"")+`<p class="note">${nw.length} nouveau(x) mot(s) proposé(s) au lexique vivant (section 4), en attente de validation humaine.</p><div class="scroll"><table><tr><th>Urgence</th><th>Commentaire</th><th>Traduction</th><th>Sentiment IA</th><th>Sujet</th><th>Réponse suggérée (à valider)</th></tr>`+rows.map(x=>{const s=["pos","neg","neu"].includes(x.a.s)?x.a.s:"neu";return `<tr><td>${"🔴".repeat(Math.min(3,Math.max(1,+x.a.u||1)))}</td><td dir="auto">${esc(x.r.txt)}</td><td>${esc(x.a.fr||"—")}</td><td>${bd(s,x.a.ir)}</td><td>${esc(x.a.t||"—")}</td><td dir="auto">${esc(x.a.r||"—")}</td></tr>`}).join("")+"</table></div>"}
+catch(e){$("aio").innerHTML='<span class="note">'+(e&&e.code==="not_granted"?"Autorisation refusée : le mode IA reste désactivé, le moteur à règles fonctionne toujours.":e&&e.code==="rate_limited"?"Trop de requêtes : réessayez dans un instant.":"L’analyse IA a échoué ("+esc((e&&e.message)||"erreur")+"). Réessayez ou utilisez le moteur à règles.")+"</span>"}
+btn.disabled=false;btn.textContent="✨ Analyser avec l’IA (Claude)"};
+$("csv").onclick=async()=>{if(!last.length){alert("Analysez d’abord des commentaires.");return}if(!DL){alert("L’export n’est pas disponible dans cette vue.");return}
+const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+const c=["commentaire,sentiment_regles,ironie_regles,sujet,modele_standard,sentiment_ia,traduction_ia,urgence_ia,reponse_ia"].concat(last.map(r=>[r.txt,r.sent,r.ir,r.topic,r.base,(r.ai||{}).s,(r.ai||{}).fr,(r.ai||{}).u,(r.ai||{}).r].map(q).join(",")));
+try{await DL.save({filename:"derja-sense-resultats.csv",data:new Blob(["\uFEFF"+c.join("\n")],{type:"text/csv"})})}catch(e){if(!e||e.code!=="declined")alert("Export impossible.")}};
+const _r=render;render=function(){_r();const R=last,n=R.length,c=k=>R.filter(r=>r.sent===k).length;$('dist').innerHTML='<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;margin-top:10px">'+['pos','neu','neg'].map(k=>`<i class="${k}" style="width:${pc(c(k),n)}%" title="${SL[k]}: ${c(k)}"></i>`).join('')+'</div><div class="mut" style="margin-top:4px">positif · neutre · négatif</div>';applyF()};
+function applyF(){const fs=$('fs').value,ft=$('ft').value,fq=strip($('fq').value);[...$('tbl').querySelectorAll('tr')].slice(1).forEach((tr,i)=>{const r=last[i];if(!r)return;tr.style.display=((!fs||(fs==='ir'?r.ir:r.sent===fs))&&(!ft||r.topic===ft)&&(!fq||strip(r.txt).includes(fq)))?'':'none'})}
+['fs','ft','fq'].forEach(id=>$(id).oninput=applyF);
+function negT(){const t={};last.filter(r=>r.sent==='neg').forEach(r=>t[r.topic]=(t[r.topic]||0)+1);return Object.entries(t).sort((a,b)=>b[1]-a[1])}
+let SN=[];try{SN=JSON.parse(localStorage.getItem('dsn')||'[]')}catch(e){}
+function rsn(){$('snl').innerHTML=SN.length?'<table><tr><th>Date</th><th>Série</th><th>Comm.</th><th>% négatifs</th><th>Ironies</th><th>Sujet n°1</th><th>Évolution</th></tr>'+SN.map((s,i)=>`<tr><td>${s.d}</td><td>${esc(s.l)}</td><td>${s.n}</td><td>${s.neg}%</td><td>${s.ir}</td><td>${s.t}</td><td>${i?((s.neg-SN[i-1].neg>0?'+':'')+(s.neg-SN[i-1].neg)+' pt'):'—'}</td></tr>`).join('')+'</table>':'<span class="note">Aucune analyse enregistrée.</span>'}
+$('sv').onclick=()=>{if(!last.length){alert('Analysez d’abord des commentaires.');return}const n=last.length,T=negT();SN.push({d:new Date().toISOString().slice(0,10),l:$('sl').value||('Série '+(SN.length+1)),n,neg:pc(last.filter(r=>r.sent==='neg').length,n),ir:last.filter(r=>r.ir).length,t:T[0]?T[0][0]:'—'});try{localStorage.setItem('dsn',JSON.stringify(SN))}catch(e){}$('sl').value='';rsn()};
+$('rpt').onclick=async()=>{if(!last.length){alert('Analysez d’abord des commentaires.');return}if(!DL){alert('L’export n’est pas disponible dans cette vue.');return}const n=last.length,c=k=>last.filter(r=>r.sent===k).length,T=negT();const urg=last.filter(r=>r.sent==='neg').sort((a,b)=>((b.ai&&+b.ai.u)||0)-((a.ai&&+a.ai.u)||0)).slice(0,5);
+const md=['# Rapport Derja Sense AI','Date : '+new Date().toISOString().slice(0,10)+' · '+n+' commentaires publics anonymisés','','## Synthèse','- Positifs : '+pc(c('pos'),n)+' % · Négatifs : '+pc(c('neg'),n)+' % · Neutres : '+pc(c('neu'),n)+' %','- Ironies détectées : '+last.filter(r=>r.ir).length,'','## Actions prioritaires',...(T.length?T.slice(0,3).map(([k,v],i)=>(i+1)+'. **'+k+'** ('+v+' commentaires négatifs) : '+ACT[k]):['Aucune action urgente.']),'','## Réponses suggérées (à valider avant publication)',...urg.map(r=>'- « '+r.txt+' » → '+((r.ai&&r.ai.r)||REP[r.topic])),'','## Limites','Moteur à règles et IA : validation humaine obligatoire, résultats indicatifs, dialectes régionaux partiellement couverts.'].join('\n');
+try{await DL.save({filename:'rapport-derja-sense.md',data:new Blob([md],{type:'text/markdown'})})}catch(e){if(!e||e.code!=='declined')alert('Export impossible.')}};
+$('lt1').oninput=()=>{const v=$('lt1').value.trim();if(!v){$('lt2').innerHTML='';return}const r=analyse(v);$('lt2').innerHTML=`${bd(r.sent,r.ir)} · sujet : <b>${r.topic}</b> · modèle standard : <span class="b ${r.base}">${SL[r.base]}</span><br><span class="mut" dir="auto">${esc(r.az)}</span><br><span class="mut">Signaux : ${esc(r.hits.join(', ')||'—')}</span>`};
+try{const sv=localStorage.getItem('dsi');if(sv)$('inp').value=sv}catch(e){}
+$('inp').addEventListener('input',()=>{try{localStorage.setItem('dsi',$('inp').value)}catch(e){}});
+rsn();build();
+</script>
+</body>
+</html>
